@@ -1,0 +1,7 @@
+import nltk
+from keyWordExtraction import *
+
+
+pos_key_words = pos_tag("input.xml")
+
+
