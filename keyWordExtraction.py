@@ -3,27 +3,39 @@ import nltk
 import xml.etree.ElementTree
 from tfidfHelper import *
 import operator
+import re
+import subprocess
+import webbrowser
 
-#st = StanfordNERTagger("/usr/share/stanford-ner/classifiers/english.all.3class.distsim.crf.ser.gz","/usr/share/stanford-ner/stanford-ner.jar")
-#e = xml.etree.ElementTree.parse('input.xml').getroot()
+st = StanfordNERTagger("/usr/share/stanford-ner/classifiers/english.all.3class.distsim.crf.ser.gz","/usr/share/stanford-ner/stanford-ner.jar")
+e = xml.etree.ElementTree.parse('input.xml').getroot()
 # print e[3].text
 
-
-
-def ner_tag(input):                 #input is input xml file name (along with extension)
-    ner_key=set()
+def define_input(input):
+    global e
     e = xml.etree.ElementTree.parse(input).getroot()
+
+def ner_tag():
+    ner_key=set()
     for child in e:
 	    tagged = st.tag(child.text.split())
 	    for i,j in tagged:
 		    if j=="PERSON" or j=="ORGANISATION" or j=="LOCATION":
 			    ner_key.add(i)
+    k = xml.etree.ElementTree.SubElement(e, 'ner_keywords')
+    tag_data = ""
+    for i in ner_key:
+        tag_data+=i
+        tag_data+=" ;"
+    k.text=tag_data 
+    tree = xml.etree.ElementTree.ElementTree(e)
+    tree.write('output.xml') 
     return ner_key
 
 
 
 
-def tfidf_keyWords(input):
+def tfidf_keywords():
     numOfKeys = 10
     input = xml2txt(input)
     tfidf_values = {}
@@ -39,12 +51,11 @@ def tfidf_keyWords(input):
     return keys
 
 
-def pos_tag(input):
+def pos_tag():
     pos_key = set()
     keys={}
     numkeys=0
     tlen=0
-    e = xml.etree.ElementTree.parse(input).getroot()
     for child in e:
         text = nltk.word_tokenize(child.text.replace("-", ""))
         pos_tagged = nltk.pos_tag(text)
@@ -98,3 +109,41 @@ def pos_tag(input):
     tree = xml.etree.ElementTree.ElementTree(e)
     tree.write('output.xml')      
     return pos_key
+
+def wikify():
+    inputtext=""
+    for child in e:
+        inputtext+=child.text
+    command = 'curl http://model.dbpedia-spotlight.org/en/annotate' + \
+    ' --data-urlencode "text=' +inputtext +'" --data "confidence=0.4"'
+    # print command
+
+    htmltext = subprocess.check_output(command, shell=True)
+    htmlfile = open("dbpedia.html","w")
+    htmlfile.write(htmltext)
+    htmlfile.close
+    webbrowser.open("dbpedia.html", new=2)
+    # print htmltext
+    # print type(htmltext)
+
+
+
+    regex = '<a([^>]+)>(.+?)</a>'
+    pattern = re.compile(regex)
+    links = re.findall(pattern, htmltext)
+    keyw=set()
+    n = len(links)
+    for i in range(n):
+        keyw.add(links[i][1])
+    print keyw
+    k = xml.etree.ElementTree.SubElement(e, 'wikify_keywords')
+    tag_data = ""
+    for i in keyw:
+        tag_data+=i
+        tag_data+=" ;"
+    k.text=tag_data 
+    tree = xml.etree.ElementTree.ElementTree(e)
+    tree.write('output.xml')
+
+def common_keywords(*s):
+    return set.intersection(*map(set,s))
