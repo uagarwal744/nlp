@@ -1,6 +1,7 @@
 from nltk.tag.stanford import StanfordNERTagger, StanfordPOSTagger, StanfordTagger
 import nltk
 import xml.etree.ElementTree
+from nltk.corpus import stopwords
 from tfidfHelper import *
 import operator
 import re
@@ -9,7 +10,7 @@ import webbrowser
 
 st = StanfordNERTagger("/usr/share/stanford-ner/classifiers/english.all.3class.distsim.crf.ser.gz","/usr/share/stanford-ner/stanford-ner.jar")
 e = xml.etree.ElementTree.parse('input.xml').getroot()
-# print e[3].text
+#print e[3].text
 
 def define_input(input):
     global e
@@ -35,21 +36,65 @@ def ner_tag():
 
 
 
-def tfidf_keywords():
+def tfidf_keywords(input):
     numOfKeys = 10
-    input = xml2txt(input)
-    tfidf_values = {}
-    for i in input:
-        if i not in tfidf_values:
-            tfidf_values[i] = tfidf(i, input)    
-    tfidf_values = sorted(tfidf_values.items(), key=operator.itemgetter(1))
-    numWords = len(tfidf_values)
-    tfidf_values = tfidf_values[numWords-numOfKeys:]
-    keys=set()    
-    for i in xrange(0,numOfKeys):
-        keys.add(tfidf_values[i][0])
-    return keys
-
+    df = {}
+    numDocs = 18
+    for i in xrange(101,118):
+        temp_tf = {}
+        filename = 'data/lebo'+str(i)+'.xml'
+        e = xml.etree.ElementTree.parse(filename).getroot()
+        
+        for element in e.iter():
+            if element.text==None:
+                continue
+            wordbag = element.text.split()
+            for word in wordbag:
+                if word.lower() not in stopwords.words('english') and word.lower() not in temp_tf:
+                    if word.lower() not in df:                
+                        df[word.lower()] = 1
+                    else:
+                        df[word.lower()] += 1    
+                    temp_tf[word.lower()] = 1
+    
+    #print "#########    DF      ##########"
+    #print df  
+    #for i in xrange(100,118):
+    #    tf = {}
+    #    e = xml.etree.ElementTree.parse('data/lebo'+str(i)+'.xml').getroot()
+    e = xml.etree.ElementTree.parse('lebo104.xml').getroot()
+    tf = {}
+    tfidfval = {}
+    for element in e.iter():
+        if element.text==None:
+            continue
+        wordbag = element.text.split()
+        for word in wordbag:
+            if word.lower() not in stopwords.words('english'):
+                if word.lower() not in tf:
+                    tf[word.lower()] = 1
+                else:
+                    tf[word.lower()] += 1
+    #print "#########    TF      ##########"    
+    #print tf
+      
+    for i in tf:
+        idf = math.log(numDocs/df[i])
+        tfidfval[i] = idf*tf[i]
+    sorted_x = list(sorted(tfidfval.items(), key=operator.itemgetter(1)))            
+    keywords = sorted_x[len(sorted_x)-numOfKeys:]
+    for i in xrange(0,len(keywords)):
+        keywords[i]=keywords[i][0]
+    k = xml.etree.ElementTree.SubElement(e, 'tfidf_key_words')
+    tag_data = ""
+    for i in keywords:
+        tag_data+=i
+        tag_data+=" ;"
+    k.text=tag_data 
+    tree = xml.etree.ElementTree.ElementTree(e)
+    tree.write('output.xml')      
+    return keywords
+    
 
 def pos_tag():
     pos_key = set()
