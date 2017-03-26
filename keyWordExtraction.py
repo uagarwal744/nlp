@@ -36,7 +36,7 @@ def ner_tag():
 
 
 
-def tfidf_keywords(input):
+def tfidf_keywords():
     numOfKeys = 10
     df = {}
     numDocs = 18
@@ -62,7 +62,7 @@ def tfidf_keywords(input):
     #for i in xrange(100,118):
     #    tf = {}
     #    e = xml.etree.ElementTree.parse('data/lebo'+str(i)+'.xml').getroot()
-    e = xml.etree.ElementTree.parse('lebo104.xml').getroot()
+    e = xml.etree.ElementTree.parse('data/lebo104.xml').getroot()
     tf = {}
     tfidfval = {}
     for element in e.iter():
@@ -189,6 +189,7 @@ def wikify():
     k.text=tag_data 
     tree = xml.etree.ElementTree.ElementTree(e)
     tree.write('output.xml')
+    return keyw
 
 def common_keywords(*s):
     return set.intersection(*map(set,s))
