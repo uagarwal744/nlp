@@ -43,18 +43,20 @@ function UserAction(text, callback) {
      var xhttp = new XMLHttpRequest();
      xhttp.onreadystatechange = function() {
       if (this.readyState == 4 && this.status == 200) {
-        document.getElementById("demo").innerHTML = this.responseText;
-
-        callback(Object(this.responseText));
+        var query = JSON.parse(this.responseText);
+        document.getElementById("demo").innerHTML = query.response.metadata["dc.subject"];
+        console.log(query.response.metadata["dc.subject"]);
+        callback(query);
     }
   };
-  xhttp.open("POST", "http://10.17.250.250/services/extractMetadataFromText", true);
+   text = text.replace(/\n/g, '');
   // xhttp.setRequestHeader("Content-type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW");
-  console.log(typeof(text.join()));
-  console.log("------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"text\"\r\n\r\n" + text.join() + "\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--");
-  xhttp.send("'------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"text\"\r\n\r\n" + text.join() + "\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--'");
+  // console.log(`------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"text\"\r\n\r\n` + text.join( + `\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--`);
+  xhttp.open("POST", "http://10.17.250.250/services/extractMetadataFromText", true);
+  xhttp.setRequestHeader("Content-type", "multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW");
+  xhttp.send("------WebKitFormBoundary7MA4YWxkTrZu0gW\r\nContent-Disposition: form-data; name=\"text\"\r\n\r\n" + text + "\r\n------WebKitFormBoundary7MA4YWxkTrZu0gW--");
 
-  }
+}
 
 
 function myFunction(xml) {
@@ -70,15 +72,26 @@ function myFunction(xml) {
     for(var i = 0; i<headings.length; i++) {
       finalText["<p>" + headings[i]] = splittext[i+1] + "</p>"; 
     }
-    UserAction(Object.values(finalText), function(meta) {
-      console.log(Object.values(meta));
-      var keywords = meta.response.metadata.dc.subject;
-      for(var i=0;i<keywords.length;i++) {
-      textContent = textContent.replace(keywords[i],"<keyword>" + keywords[i] +"</keyword>")
+    finalString = JSON.stringify(finalText, undefined, 2);
+    var keywords = [];
+    var k = 0;
+    for(var i=0; i < Object.values(finalText).length; i++) {
+    UserAction(Object.values(finalText)[i], function(meta) {
+      keywords=keywords.concat(meta.response.metadata["dc.subject"]);
+      k++;
+      console.log(k, Object.values(finalText).length);
+    if(k>=Object.values(finalText).length-4) {
+      console.log(typeof(keywords));
+      for(var j=0;j<keywords.length;j++) {
+        var searchMask = " " + keywords[j];
+        var regEx = new RegExp(searchMask, "ig");
+      finalString = finalString.replace(regEx,"<keyword>" + " " +keywords[j] +"</keyword>")
     }
+     document.getElementById("outputbox").innerHTML = finalString;
+   }
     });
+  }
     console.log(finalText);
-    document.getElementById("outputbox").innerHTML = JSON.stringify(finalText, undefined, 2);
 
 }
 
